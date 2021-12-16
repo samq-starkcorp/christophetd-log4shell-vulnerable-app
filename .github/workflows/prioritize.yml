@@ -1,5 +1,6 @@
-# replace .war with .jar or .ear if needed
-name: Whitesource Prioritize Java with Maven
+# replace .war with .ear or the following for WARFILE if needed
+# JARFILE=$(find ./build/libs -type f -wholename "*.jar" ! -wholename "*javadoc*" ! -wholename "*groovydoc*" ! -wholename "*sources*")
+name: Whitesource Prioritize Java with Gradle
 
 on:
   push:
@@ -19,16 +20,19 @@ jobs:
       with:
         java-version: '8'
         distribution: 'adopt'
-    - name: Cache local Maven repository
-      uses: actions/cache@v2
+    - uses: actions/cache@v2
       with:
-        path: ~/.m2/repository
-        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
         restore-keys: |
-          ${{ runner.os }}-maven-
+          ${{ runner.os }}-gradle-
 
-    - name: Build with Maven
-      run: mvn clean install -DskipTests=true
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+    - name: Build with Gradle
+      run: ./gradlew build -x test
     - name: WhiteSource Unified Agent Scan
       env:
         GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
@@ -40,14 +44,15 @@ jobs:
         WS_ENABLEIMPACTANALYSIS: true
         WS_REQUIREKNOWNSHA1: false
         WS_RESOLVEALLDEPENDENCIES: false
-        WS_MAVEN_RESOLVEDEPENDENCIES: true
-        WS_MAVEN_AGGREGATEMODULES: true
+        WS_GRADLE_RESOLVEDEPENDENCIES: true
+        WS_GRADLE_AGGREGATEMODULES: true
+        WS_GRADLE_PREFERREDENVIRONMENT: wrapper
+        WS_GRADLE_WRAPPERPATH: ./gradlew
         WS_FILESYSTEMSCAN: false
         WS_GENERATEPROJECTDETAILSJSON: true
       run: |
         curl -LJO https://unified-agent.s3.amazonaws.com/wss-unified-agent.jar
         echo Unified Agent downloaded successfully
-        APP_PATH=$(find ./ -type f -wholename "*/target/*.jar")
-        echo $WARFILE will be added to appPath
+        APP_PATH=$(find ./build/libs -type f -wholename "*.jar")
+        echo $APP_PATH will be added to appPath
         java -jar wss-unified-agent.jar -appPath $APP_PATH -d ./
-        
