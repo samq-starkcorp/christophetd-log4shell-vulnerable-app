@@ -53,6 +53,6 @@ jobs:
       run: |
         curl -LJO https://unified-agent.s3.amazonaws.com/wss-unified-agent.jar
         echo Unified Agent downloaded successfully
-        APP_PATH=$(find ./build/libs -type f -wholename "*.jar")
+        APP_PATH=$(find ./build/libs -type f -wholename "*SNAPSHOT.jar")
         echo $APP_PATH will be added to appPath
         java -jar wss-unified-agent.jar -appPath $APP_PATH -d ./
